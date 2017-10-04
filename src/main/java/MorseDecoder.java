@@ -30,7 +30,7 @@ public class MorseDecoder {
      * Bin size for power binning. We compute power over bins of this size. You will probably not
      * need to modify this value.
      */
-    private static final int BIN_SIZE = 100;
+    private static final int BIN_SIZE = 50;
 
     /**
      * Compute power measurements for fixed-size bins of WAV samples.
@@ -53,17 +53,19 @@ public class MorseDecoder {
 
         double[] sampleBuffer = new double[BIN_SIZE * inputFile.getNumChannels()];
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
-            // Get the right number of samples from the inputFile
-            // Sum all the samples together and store them in the returnBuffer
+            int numOfFrames = inputFile.readFrames(sampleBuffer, BIN_SIZE);
+            for(int i = 0; i < numOfFrames; i++) {
+                returnBuffer[binIndex] += Math.abs(sampleBuffer[i]);
+            }
         }
         return returnBuffer;
     }
 
     /** Power threshold for power or no power. You may need to modify this value. */
-    private static final double POWER_THRESHOLD = 10;
+    private static final double POWER_THRESHOLD = 1;
 
     /** Bin threshold for dots or dashes. Related to BIN_SIZE. You may need to modify this value. */
-    private static final int DASH_BIN_COUNT = 8;
+    private static final int DASH_BIN_COUNT = 25;
 
     /**
      * Convert power measurements to dots, dashes, and spaces.
@@ -87,7 +89,34 @@ public class MorseDecoder {
         // else if issilence and wassilence
         // else if issilence and not wassilence
 
-        return "";
+        int type_count = 0;
+        int counter = 0;
+        String ret = "";
+        for (int i = 0; i < powerMeasurements.length; i++) {
+            if (powerMeasurements[i] > POWER_THRESHOLD) {
+                type_count++;
+            } else if(type_count > 0) {
+                if(type_count > DASH_BIN_COUNT) {
+                    ret += "-";
+                }else if(type_count>0){
+                    ret += ".";
+                }
+                counter = 0;
+                while(powerMeasurements[i] < POWER_THRESHOLD) {
+                    counter++;
+                    i++;
+                    if (i >= powerMeasurements.length) {
+                        break;
+                    }
+                }
+                if(counter > DASH_BIN_COUNT) {
+                    ret += " ";
+                }
+                type_count = 0;
+            }
+        }
+
+        return ret;
     }
 
     /**
